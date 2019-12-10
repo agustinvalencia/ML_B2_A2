@@ -142,7 +142,50 @@ ggplot(data) +
     ggtitle("Real and Predicted Mortality")
 ```
 
+Although it seems to be a fair general approximation it seems to be missing some abnormal positive and negative peaks.
+
+```{r, fig.align='center', out.height='40%'}
+plotAll <- function(d, p, title) {
+    shortWeeks <- 1:length(d$'2003')
+    a <- ggplot() +
+        geom_point(aes(x=weeks, y=d$'1995')) +
+        geom_point(aes(x=weeks, y=d$'1996')) +
+        geom_point(aes(x=weeks, y=d$'1997')) +
+        geom_point(aes(x=weeks, y=d$'1998')) +
+        geom_point(aes(x=weeks, y=d$'1999')) +
+        geom_point(aes(x=weeks, y=d$'2000')) +
+        geom_point(aes(x=weeks, y=d$'2001')) +
+        geom_point(aes(x=weeks, y=d$'2002')) +
+        geom_point(aes(x=shortWeeks, y=d$'2003')) +
+        geom_line(aes(x=weeks, y=p$'1995', color="1995")) + 
+        geom_line(aes(x=weeks, y=p$'1996', color="1996")) + 
+        geom_line(aes(x=weeks, y=p$'1997', color="1997")) + 
+        geom_line(aes(x=weeks, y=p$'1998', color="1998")) + 
+        geom_line(aes(x=weeks, y=p$'1999', color="1999")) + 
+        geom_line(aes(x=weeks, y=p$'2000', color="2000")) + 
+        geom_line(aes(x=weeks, y=p$'2001', color="2001")) + 
+        geom_line(aes(x=weeks, y=p$'2002', color="2002")) + 
+        geom_line(aes(x=shortWeeks, y=p$'2003', color="2003")) +
+        ggtitle(title)
+    return(a)
+}
+
+preds <- list()
+for (i in 1:length(years)) {
+    year <- years[i]
+    d <- data[which(data$Year == year),]
+    preds[[i]] <- predict(model, d)
+}
+names(preds) <- years
+p <- plotAll(mortData, preds, "Mortality Overall Real and Predictions")
+p <- p + ylab("Mortality")
+p
+```
+
+It can be seen that given the variability of mortality per week each year is the GAM fit acceptably well, though still a good predictor.
+
 4. Examine how the penalty factor of the spline function in the GAM model from step 2 influences the estimated deviance of the model. Make plots of the predicted and observed mortality against time for cases of very high and very low penalty factors. What is the relation of the penalty factor to the degrees of freedom? Do your results confirm this relationship?
+
 
 5. Use the model obtained in step 2 and plot the residuals and the influenza values against time (in one plot). Is the temporal pattern in the residuals correlated to the outbreaks of influenza?
 
