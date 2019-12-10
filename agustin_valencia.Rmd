@@ -5,7 +5,7 @@ date: "12/9/2019"
 output: pdf_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, setup=TRUE}
 knitr::opts_chunk$set(echo = FALSE)
 library(openxlsx)
 library(ggplot2)
@@ -19,7 +19,7 @@ set.seed(12345)
 
 The Excel document influenza.xlsx contains weekly data on the mortality and the number of laboratory-confirmed cases of influenza in Sweden. In addition, there is information about population-weighted temperature anomalies (temperature deficits).
 
-```{r q1_read_data}
+```{r q1_read_data, q1=TRUE}
 ##############################################################################
 ##                              Assignment 1
 ##############################################################################
@@ -32,7 +32,7 @@ data <- read.xlsx(dataPath)
 
 1. Use time series plots to visually inspect how the mortality and influenza number vary with time (use Time as X axis). By using this plot, comment how the amounts of influenza cases are related to mortality rates.
 
-```{r q1_time_series_plotting, fig.align='center', out.height='22%'}
+```{r q1_time_series_plotting, fig.align='center', out.height='22%', q1=TRUE}
 
 # Time Series plotting
 mortPlot <- ggplot(data) + 
@@ -51,7 +51,7 @@ It seems to be a modality in the data. It can be seen that Influenza peaks seems
 
 As the model is meant to learn from weeks variations along the year, it is better to separate the data into several time series per year and see how the data looks now. 
 
-```{r q1_time_series_per_year, fig.align='center', out.height='27%'}
+```{r q1_time_series_per_year, fig.align='center', out.height='27%', q1=TRUE}
 
 # Time series per year
 years <- unique(data$Year)
@@ -111,7 +111,9 @@ It is fitted one model with the following formula:
 
 $$Mortality \approx Year + spline(Week)$$
 
-```{r q1_gam_fit}
+```{r q1_gam_fit, q1=TRUE}
+
+# Training GAM
 model <- gam (
             Mortality ~ Year +  
             s(Week, k = length(unique(data$Week))), 
@@ -122,13 +124,13 @@ model <- gam (
 
 The summary of the obtained probabilistic model is:
 
-```{r q1_gam_summary}
+```{r q1_gam_summary, q1=TRUE}
 summary(model)
 ```
 
 The smoothed curve approximated by the GAM model is:
 
-```{r q1_gam_plot_model, fig.align='center', out.height='40%'}
+```{r q1_gam_plot_model, fig.align='center', out.height='40%', q1=TRUE}
 plot(model, main="Smooth Approximation of Mortality")
 ```
 
@@ -136,7 +138,7 @@ plot(model, main="Smooth Approximation of Mortality")
 \newpage
 3. Plot predicted and observed mortality against time for the fitted model and comment on the quality of the fit. Investigate the output of the GAM model and report which terms appear to be significant in the model. Is there a trend in mortality change from one year to another? Plot the spline component and interpret the plot.
 
-```{r q1_predictions, fig.align='center', out.height='40%'}
+```{r q1_predictions, fig.align='center', out.height='40%', q1=TRUE}
 
 # Predictions
 predictions <- predict(model, data)
@@ -148,7 +150,9 @@ ggplot(data) +
 
 Although it seems to be a fair general approximation it seems to be missing some abnormal positive and negative peaks.
 
-```{r q1_predictions_over_year, fig.align='center', out.height='40%'}
+```{r q1_predictions_over_year, fig.align='center', out.height='40%', q1=TRUE}
+
+# Plot GAM predictions per year
 plotAll <- function(d, p, title) {
     shortWeeks <- 1:length(d$'2003')
     a <- ggplot() +
@@ -192,7 +196,7 @@ It can be seen that given the variability of mortality per week each year is the
 
 The smoothing penalty in `gam()` is given by the `sp` parameter sent to the constructor to be used in training. For this testing puropose it have been used the following penalties $\{10^{-6}, 10^{-3}, 1, 10^{3}, 10^{6}\}$
 
-```{r q1_penalty_factor_analysis, fig.align='center', out.height='70%'}
+```{r q1_penalty_factor_analysis, fig.align='center', out.height='70%', q1=TRUE}
 
 # Penalty factor analysis
 penalties <- c(1e-6, 1e-3, 1, 1e3, 1e6)
@@ -236,7 +240,7 @@ It can be seen that the lower the penalty the better the fit. In this case it lo
 
 At a first glance Residuals seems to be noise compared to Influenza behavior.
 
-```{r q1_residuals_vs_Influenza, fig.align='center', out.height='40%'}
+```{r q1_residuals_vs_Influenza, fig.align='center', out.height='40%', q1=TRUE}
 
 # Comparing model residuals against influenza cases
 model <- gam (
@@ -254,7 +258,9 @@ ggplot(data) +
 
 Though, let's test numerically by getting their correlation statistic. 
 
-```{r q1_residuals_correlation}
+```{r q1_residuals_correlation, q1=TRUE}
+
+# Correlation measurement
 corr <- cor(model$residuals, data$Influenza)
 print(corr)
 ```
@@ -269,7 +275,7 @@ $$Mortality \approx spline(Year) + spline(Week) + spline(Influenza)$$
 
 The obtained smoothers are the following.
 
-```{r q1_gam2_fit, fig.align='center', out.height='30%'}
+```{r q1_gam2_fit, fig.align='center', out.height='30%', q1=TRUE}
 
 # GAM 2 training
 model <- gam( formula = Mortality ~ s(Year, k = length(unique(data$Year))) +
@@ -283,7 +289,7 @@ plot(model)
 
 Now, using the model to predict the Mortality :
 
-```{r q1_gam2_predictions, fig.align='center', out.height='40%'}
+```{r q1_gam2_predictions, fig.align='center', out.height='40%', q1=TRUE}
 
 # GAM 2 predictions
 predictions <- predict(model, data)
@@ -301,7 +307,13 @@ ggplot() +
 
 The data file data.csv contains information about 64 e-mails which were manually collected from DBWorld mailing list. They were classified as: 'announces of conferences' (1) and 'everything else' (0) (variable Conference)
 
-```{r q2_load_data}
+```{r q2_load_data, q2 = TRUE}
+
+
+
+##############################################################################
+##                              Assignment 2
+##############################################################################
 dataPath <- "data/data.csv"
 data <- read.csv2(dataPath)
 ```
@@ -322,8 +334,22 @@ Compare the results of these models with the results of the nearest shrunken cen
 
 
 \newpage
+# Appendix A : Setup Code
 
-# Appendix A : Code
-
-```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE}
+```{r, ref.label=knitr::all_labels(setup==TRUE),echo=TRUE,eval=FALSE}
 ```
+
+\newpage
+# Appendix B : Assignment 1
+
+```{r, ref.label=knitr::all_labels(q1==TRUE),echo=TRUE,eval=FALSE}
+```
+
+\newpage
+# Appendix C : Assignment 2
+
+```{r, ref.label=knitr::all_labels(q2==TRUE),echo=TRUE,eval=FALSE}
+```
+
+
+
