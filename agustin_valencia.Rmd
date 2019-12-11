@@ -12,6 +12,9 @@ library(ggplot2)
 library(mgcv)
 library(akima)
 library(plotly)
+library(pamr)
+library(glmnet)
+library(e1071)
 set.seed(12345)
 ```
 
@@ -321,13 +324,123 @@ data <- read.csv2(dataPath)
 
 1. Divide data into training and test sets (70/30) without scaling. Perform nearest shrunken centroid classification of training data in which the threshold is chosen by cross-validation. Provide a centroid plot and interpret it. How many features were selected by the method? List the names of the 10 most contributing features and comment whether it is reasonable that they have strong effect on the discrimination between the conference mails and other mails? Report the test error.
 
+```{r q2_train_split_data, q2 = TRUE}
+## Splitting data
+splitData <- function(data, trainRate) {
+    n <- dim(data)[1]
+    idxs <- sample(1:n, floor(trainRate*n))
+    train <- data[idxs,]
+    test <- data[-idxs,]
+    print("Dividing data - ")
+    cat("size of Total data :", nrow(train), "\n")
+    cat("size of training   :", nrow(train), "\n")
+    cat("size of testing    :", nrow(test), "\n")
+    return (list(train = train, test = test))
+}
+
+split <- splitData(data, .7)
+train <- split$train
+test  <- split$test
+```
+
+
+```{r q2_train_crossvalidation, q2 = TRUE, results=FALSE}
+# Preprocessing
+y <- train[[ncol(train)]]
+x <- t(train[,-ncol(train)])
+mydata <- list(
+    x = x, 
+    y = as.factor(y),
+    geneid = as.character(1:nrow(x)),
+    genenames = rownames(x)
+)
+
+# Training and cross-validating threshold
+model <- pamr.train(mydata)
+cvmodel <- pamr.cv(model, mydata)
+pamr.plotcv(cvmodel)
+```
+
+
+```{r q2_train_crossvalidation_results, q2 = TRUE}
+minError <- min(cvmodel$error)
+bestThreshold <- cvmodel$threshold[which.min(cvmodel$error)]
+
+cat("The minimum error is ", minError, 
+      "and it is obtained for threshold =", bestThreshold)
+```
+
+Therefore from the crossvalidation results it can be seen that the best performance error-wise is obtained for threshold = 1.65
+
+```{r q2_best_model_training_plot, q2 = TRUE, results=FALSE}
+# best model
+bestModel <- pamr.train(mydata, threshold = bestThreshold)
+pamr.plotcen(bestModel, mydata, threshold = bestThreshold)
+selectedGenes <- pamr.listgenes(bestModel, mydata, 
+                               threshold=bestThreshold,
+                               genenames = TRUE)
+```
+
+
+```{r q2_best_model_training_print, q2 = TRUE}
+bestGenes <- selectedGenes[1:10,]
+cat("There were selected,",nrow(selectedGenes), "features\n")
+print("The best 10 selected features are:")
+print(bestGenes)
+```
+
+```{r q2_testing, q2=TRUE}
+# util function
+get_performance <- function(targets, predictions, text) {
+    cat("Classification Performance :", text, "\n")
+    t <- table(targets, predictions)
+    print("Confusion Matrix")
+    print(t)
+    tn <- t[1,1]
+    tp <- t[2,2]
+    fp <- t[1,2]
+    fn <- t[2,1]
+    total <- dim(test)[1]
+    tpr <- tp/(tp+fp) * 100
+    tnr <- tn/(tn+fn) * 100
+    fpr <- fp/(tp+fp) * 100
+    fnr <- fn/(tn+fn) * 100
+    
+    cat("Rates details:\n")
+    cat(" TPR =", tpr, "% -")
+    cat(" TNR =", tnr, "% -")
+    cat(" FPR =", fpr, "% -")
+    cat(" FNR =", fnr, "%")
+    cat("\n Misclassification Rate = ", (fp+fn)/total * 100, "%\n")
+}
+yTest <- test[[ncol(test)]]
+xTest <- t(test[,-ncol(test)])
+predictions <- pamr.predict(bestModel, newx = xTest, type = "class", 
+                            threshold = bestThreshold)
+get_performance(yTest, predictions, "Shrunken centroid and shit")
+```
+
+
+
 2. Compute the test error and the number of the contributing features for the following methods fitted to the training data:
 
 a. Elastic net with the binomial response and $\alpha=0.5$ in which penalty is selected by the cross-validation
+```{r q2_elasticnet, q2=TRUE}
+
+# Elastic-net
+#elasticnetModel <- glmnet(x = x, y = y, family="binomial", alpha=.5)
+
+```
 
 b. Support vector machine with “vanilladot” kernel.
 
 Compare the results of these models with the results of the nearest shrunken centroids (make a comparative table). Which model would you prefer and why?
+```{r q2_svm, q2=TRUE}
+
+# SVM
+svmModel <- svm(formula = Conference ~ . , data = train)
+
+```
 
 3. Implement Benjamini-Hochberg method for the original data, and use t.test() for computing p-values. Which features correspond to the rejected hypotheses? Interpret the result.
 
