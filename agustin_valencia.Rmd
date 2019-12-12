@@ -458,14 +458,15 @@ selectedCoeffs <- length(nonzeroCoeffs)
 cat("Elasticnet model has ", selectedCoeffs, " nonzero coefficients\n")
 ```
 
+\newpage
 b. Support vector machine with “vanilladot” kernel.
 
 ```{r q2_svm, q2=TRUE, message=FALSE}
 
 # SVM
 svmModel <- ksvm(Conference ~ . , data=train, type="C-svc", kernel="vanilladot")
-predictions <- predict(svmModel, test)
-get_performance(yTest, predictions, "SVM - Testing performance")
+svmPredictions <- predict(svmModel, test)
+get_performance(yTest, svmPredictions, "SVM - Testing performance")
 ```
 
 SVMs do not suffer the problem of highdimensional data, it will use all the features to compute the support vectors and the hyperplane fitted by them. 
@@ -508,26 +509,26 @@ ggplot() +
 cat("Rejected Features =", L, "\n",
     "Rejected Hypothesis Features =" )
 for(i in 1:L) {
-    cat("\t", as.character(df[i,1]), "\n")
+    cat("\t(", i, ")", as.character(df[i,1]), "\n")
 }
 
 ```
 
 
 \newpage
-# Appendix A : Setup Code
+# Appendix A : Environment setup Code
 
 ```{r, ref.label=knitr::all_labels(setup==TRUE),echo=TRUE,eval=FALSE}
 ```
 
 \newpage
-# Appendix B : Assignment 1
+# Appendix B : Code for Assignment 1
 
 ```{r, ref.label=knitr::all_labels(q1==TRUE),echo=TRUE,eval=FALSE}
 ```
 
 \newpage
-# Appendix C : Assignment 2
+# Appendix C : Code for Assignment 2
 
 ```{r, ref.label=knitr::all_labels(q2==TRUE),echo=TRUE,eval=FALSE}
 ```
