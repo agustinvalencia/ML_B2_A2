@@ -1,7 +1,6 @@
 ---
 title: "Machine Learning - Block 2 Assignment 2"
-author: "Agustín Valencia"
-date: "12/9/2019"
+author: "Agustín Valencia - aguva779"
 output: pdf_document
 ---
 
@@ -15,6 +14,8 @@ library(plotly)
 library(pamr)
 library(glmnet)
 library(e1071)
+library(kernlab)
+RNGversion('3.5.1')
 set.seed(12345)
 ```
 
@@ -35,7 +36,9 @@ data <- read.xlsx(dataPath)
 
 1. Use time series plots to visually inspect how the mortality and influenza number vary with time (use Time as X axis). By using this plot, comment how the amounts of influenza cases are related to mortality rates.
 
-```{r q1_time_series_plotting, fig.align='center', out.height='22%', q1=TRUE}
+Plotting the data against the time:
+
+```{r q1_time_series_plotting, fig.align='center', out.height='21%', q1=TRUE}
 
 # Time Series plotting
 mortPlot <- ggplot(data) + 
@@ -193,17 +196,18 @@ p <- p + ylab("Mortality")
 p
 ```
 
-It can be seen that given the variability of mortality per week each year is the GAM fit acceptably well, though still not a good predictor.
+It can be seen that given the variability of mortality per week each year, the GAM fit acceptably well the data, though still too general, thus not as good as we would likr to.
 
 4. Examine how the penalty factor of the spline function in the GAM model from step 2 influences the estimated deviance of the model. Make plots of the predicted and observed mortality against time for cases of very high and very low penalty factors. What is the relation of the penalty factor to the degrees of freedom? Do your results confirm this relationship?
 
 The smoothing penalty in `gam()` is given by the `sp` parameter sent to the constructor to be used in training. For this testing puropose it have been used the following penalties $\{10^{-6}, 10^{-3}, 1, 10^{3}, 10^{6}\}$
 
-```{r q1_penalty_factor_analysis, fig.align='center', out.height='70%', q1=TRUE}
+```{r q1_penalty_factor_analysis, fig.align='center', out.height='60%', q1=TRUE}
 
 # Penalty factor analysis
 penalties <- c(1e-6, 1e-3, 1, 1e3, 1e6)
 predictions <- list()
+estDegFreedom <- vector(length = length(penalties))
 for (i in 1:length(penalties)) {
     model <- gam (  Mortality ~ Year +  
                     s(Week, k = length(unique(data$Week))), 
@@ -212,6 +216,7 @@ for (i in 1:length(penalties)) {
                     sp = penalties[i]
                  )
     predictions[[i]] <- predict(model, data)
+    estDegFreedom[i] <- summary(model)$edf
 }
 df <- data.frame(
     time = data$Time, 
@@ -225,33 +230,45 @@ df <- data.frame(
 
 ggplot(df) +
     geom_point(aes(x=time, y=real), color="black") +
-    geom_line(aes(x=time, y=sp_1u,  color="sp = 1u"), size=1) +
-    geom_line(aes(x=time, y=sp_1m,  color="sp = 1m"), size=1) +
+    geom_line(aes(x=time, y=sp_1u,  color="sp = 0.000001"), size=1) +
+    geom_line(aes(x=time, y=sp_1m,  color="sp = 0.001"), size=1) +
     geom_line(aes(x=time, y=sp_1 ,  color="sp = 1" ), size=1) +
-    geom_line(aes(x=time, y=sp_1k,  color="sp = 1k"), size=1) +
-    geom_line(aes(x=time, y=sp_1M,  color="sp = 1M"), size=1) +
+    geom_line(aes(x=time, y=sp_1k,  color="sp = 1000"), size=1) +
+    geom_line(aes(x=time, y=sp_1M,  color="sp = 1000000"), size=1) +
     ggtitle("Effects of variations on SP penalization on Spline training") +
-    xlab("Time") + ylab("Value")
+    xlab("Time") + ylab("Mortality")
 
 
 ```
 
 It can be seen that the lower the penalty the better the fit. In this case it looks good to have such a low penalty, though in other cases it might overfit the data.
 
-\newpage
+```{r q1_degFreedom, fig.align='center', out.height='30%', q1=TRUE}
+
+# Relation between penalty factors and degrees of freedom
+ggplot() +
+    geom_point(aes(x=log10(penalties), y=estDegFreedom)) +
+    geom_line(aes(x=log10(penalties), y=estDegFreedom)) +
+    ggtitle("Estimated Degrees of Freedom vs SP penalty") +
+    ylab("Estimated Degrees of Freedom") 
+
+```
+
+Extracting the degrees of freedom from each penalization iteration it can be seen that the lower the penalization the more relaxed is the model, thus, the higher the degrees of freedom. 
+
 5. Use the model obtained in step 2 and plot the residuals and the influenza values against time (in one plot). Is the temporal pattern in the residuals correlated to the outbreaks of influenza?
 
-At a first glance Residuals seems to be noise compared to Influenza behavior.
+At a first glance Residuals seem to be noise compared to Influenza behavior.
 
-```{r q1_residuals_vs_Influenza, fig.align='center', out.height='40%', q1=TRUE}
+```{r q1_residuals_vs_Influenza, fig.align='center', out.height='70%', q1=TRUE}
 
 # Comparing model residuals against influenza cases
 model <- gam (
-            Mortality ~ Year +  
-            s(Week, k = length(unique(data$Week))), 
-            data=data,
-            method = "GCV.Cp"
-        )
+                Mortality ~ Year +  
+                s(Week, k = length(unique(data$Week))), 
+                data=data,
+                method = "GCV.Cp"
+             )
 ggplot(data) +
     geom_point(aes(x=Time, y=Influenza, color="Influenza")) +
     geom_line(aes(x=Time, y=model$residuals, color="Residuals")) +
@@ -259,7 +276,7 @@ ggplot(data) +
 ```
 
 
-Though, let's test numerically by getting their correlation statistic. 
+Nonetheless visual assumptions might be incorrect. Testing numerically by getting their correlation statistic is low, thus there is no evidence to say that the residuals from the model and the influenza measures are correlated.
 
 ```{r q1_residuals_correlation, q1=TRUE}
 
@@ -268,9 +285,7 @@ corr <- cor(model$residuals, data$Influenza)
 print(corr)
 ```
 
-Their correlation is relatively low, thus there is no evidence to say that the residuals from the model and the Influenza measures are correlated.
 
-\newpage
 6. Fit a GAM model in R in which mortality is be modelled as an additive function of the spline functions of year, week, and the number of confirmed cases of influenza. Use the output of this GAM function to conclude whether or not the mortality is influenced by the outbreaks of influenza. Provide the plot of the original and fitted Mortality against Time and comment whether the model seems to be better than the previous GAM models.
 
 It has been trained a GAM using the following formula: 
@@ -292,7 +307,7 @@ plot(model)
 
 Now, using the model to predict the Mortality :
 
-```{r q1_gam2_predictions, fig.align='center', out.height='40%', q1=TRUE}
+```{r q1_gam2_predictions, fig.align='center', out.height='60%', q1=TRUE}
 
 # GAM 2 predictions
 predictions <- predict(model, data)
@@ -302,7 +317,7 @@ ggplot() +
     ggtitle("Second GAM predictions") + ylab("Mortality")
 ```
 
-
+The model seems to fit better the data, though there are still some data points not being well approximatted. This is sign that the predictor is not overfitted, so compared against the previous predictors, this is the best one. 
 
 
 \newpage
@@ -318,6 +333,7 @@ The data file data.csv contains information about 64 e-mails which were manually
 ##                              Assignment 2
 ##############################################################################
 dataPath <- "data/data.csv"
+# data <- read.csv2(dataPath, encoding = "latin1", sep = ";")
 data <- read.csv2(dataPath)
 ```
 
@@ -331,10 +347,6 @@ splitData <- function(data, trainRate) {
     idxs <- sample(1:n, floor(trainRate*n))
     train <- data[idxs,]
     test <- data[-idxs,]
-    print("Dividing data - ")
-    cat("size of Total data :", nrow(train), "\n")
-    cat("size of training   :", nrow(train), "\n")
-    cat("size of testing    :", nrow(test), "\n")
     return (list(train = train, test = test))
 }
 
@@ -362,7 +374,7 @@ pamr.plotcv(cvmodel)
 ```
 
 
-```{r q2_train_crossvalidation_results, q2 = TRUE}
+```{r q2_train_crossvalidation_results, q2 = TRUE, results=FALSE}
 minError <- min(cvmodel$error)
 bestThreshold <- cvmodel$threshold[which.min(cvmodel$error)]
 
@@ -370,10 +382,11 @@ cat("The minimum error is ", minError,
       "and it is obtained for threshold =", bestThreshold)
 ```
 
-Therefore from the crossvalidation results it can be seen that the best performance error-wise is obtained for threshold = 1.65
+Therefore from the crossvalidation results it can be seen that the best performance error-wise is obtained for threshold = 1.29.
 
 ```{r q2_best_model_training_plot, q2 = TRUE, results=FALSE}
 # best model
+bestThreshold <- 1.29
 bestModel <- pamr.train(mydata, threshold = bestThreshold)
 pamr.plotcen(bestModel, mydata, threshold = bestThreshold)
 selectedGenes <- pamr.listgenes(bestModel, mydata, 
@@ -421,29 +434,84 @@ get_performance(yTest, predictions, "Shrunken centroid and shit")
 ```
 
 
-
+\newpage
 2. Compute the test error and the number of the contributing features for the following methods fitted to the training data:
+
+Compare the results of these models with the results of the nearest shrunken centroids (make a comparative table). Which model would you prefer and why?
 
 a. Elastic net with the binomial response and $\alpha=0.5$ in which penalty is selected by the cross-validation
 ```{r q2_elasticnet, q2=TRUE}
 
 # Elastic-net
-#elasticnetModel <- glmnet(x = x, y = y, family="binomial", alpha=.5)
+cvElastNet <- cv.glmnet(x=t(x), y=y, alpha=.5, type.measure = "mse")
+plot(cvElastNet)
+optLamdba <- cvElastNet$lambda.min
 
+elasticnetModel <- glmnet(x = t(x), y = y, family="binomial", 
+                          alpha=.5, lambda = optLamdba)
+predictions <- predict(elasticnetModel, newx = t(xTest), type="class")
+get_performance(yTest, predictions, "ElasticNet")
+
+coeffs <- coef(elasticnetModel)
+nonzeroCoeffs <- coeffs[which(coeffs != 0)]
+selectedCoeffs <- length(nonzeroCoeffs)
+cat("Elasticnet model has ", selectedCoeffs, " nonzero coefficients\n")
 ```
 
 b. Support vector machine with “vanilladot” kernel.
 
-Compare the results of these models with the results of the nearest shrunken centroids (make a comparative table). Which model would you prefer and why?
-```{r q2_svm, q2=TRUE}
+```{r q2_svm, q2=TRUE, message=FALSE}
 
 # SVM
-svmModel <- svm(formula = Conference ~ . , data = train)
-
+svmModel <- ksvm(Conference ~ . , data=train, type="C-svc", kernel="vanilladot")
+predictions <- predict(svmModel, test)
+get_performance(yTest, predictions, "SVM - Testing performance")
 ```
+
+SVMs do not suffer the problem of highdimensional data, it will use all the features to compute the support vectors and the hyperplane fitted by them. 
+
+
 
 3. Implement Benjamini-Hochberg method for the original data, and use t.test() for computing p-values. Which features correspond to the rejected hypotheses? Interpret the result.
 
+```{r q2_benjamini_la_pizza, q2=TRUE}
+
+y <- as.factor(data[,ncol(data)])
+data <- as.matrix(data[,-ncol(data)])
+pvals <- as.numeric(vector(length = ncol(data)))
+df <- data.frame(
+    word = colnames(data), 
+    pvals <- pvals
+)
+BH <- as.numeric(vector(length =ncol(data)))
+
+FDR <- 0.01
+CL  <- 0.95
+
+for(i in 1:length(pvals)) {
+    test <- t.test(data[,i] ~ y,
+                      alternative = "two.sided",
+                      conf.level = CL )
+    df[i,2] <- test$p.value
+    BH[i] <- (FDR * i / length(pvals))
+}
+
+# order increasingly the pvalues
+df <- df[order(df$pvals, decreasing = FALSE),]
+df <- cbind(df, BH)
+L <- max(which(df[,2] < df[,3]))
+
+ggplot() +
+    geom_point(aes(x=1:nrow(df), y=df[,2], color="p-values")) +
+    geom_line(aes(x=1:nrow(df), y=df[,3], color="BH")) +
+    geom_vline(xintercept = L)
+cat("Rejected Features =", L, "\n",
+    "Rejected Hypothesis Features =" )
+for(i in 1:L) {
+    cat("\t", as.character(df[i,1]), "\n")
+}
+
+```
 
 
 \newpage
