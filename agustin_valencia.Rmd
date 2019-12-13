@@ -15,7 +15,8 @@ library(pamr)
 library(glmnet)
 library(e1071)
 library(kernlab)
-RNGversion('3.5.1')
+library(readr)
+# RNGversion('3.5.1')
 set.seed(12345)
 ```
 
@@ -334,7 +335,11 @@ The data file data.csv contains information about 64 e-mails which were manually
 ##############################################################################
 dataPath <- "data/data.csv"
 # data <- read.csv2(dataPath, encoding = "latin1", sep = ";")
-data <- read.csv2(dataPath)
+data <- read_delim("Data/data.csv", ";", 
+                   escape_double = FALSE, 
+                   locale = locale(encoding = "ISO-8859-1"), 
+                   trim_ws = TRUE)
+#data <- read.csv2(dataPath)
 ```
 
 
@@ -413,7 +418,7 @@ get_performance <- function(targets, predictions, text) {
     tp <- t[2,2]
     fp <- t[1,2]
     fn <- t[2,1]
-    total <- dim(test)[1]
+    total <- sum(t)
     tpr <- tp/(tp+fp) * 100
     tnr <- tn/(tn+fn) * 100
     fpr <- fp/(tp+fp) * 100
@@ -477,40 +482,40 @@ SVMs do not suffer the problem of highdimensional data, it will use all the feat
 
 ```{r q2_benjamini_la_pizza, q2=TRUE}
 
-y <- as.factor(data[,ncol(data)])
-data <- as.matrix(data[,-ncol(data)])
-pvals <- as.numeric(vector(length = ncol(data)))
-df <- data.frame(
-    word = colnames(data), 
-    pvals <- pvals
-)
-BH <- as.numeric(vector(length =ncol(data)))
-
-FDR <- 0.01
-CL  <- 0.95
-
-for(i in 1:length(pvals)) {
-    test <- t.test(data[,i] ~ y,
-                      alternative = "two.sided",
-                      conf.level = CL )
-    df[i,2] <- test$p.value
-    BH[i] <- (FDR * i / length(pvals))
-}
-
-# order increasingly the pvalues
-df <- df[order(df$pvals, decreasing = FALSE),]
-df <- cbind(df, BH)
-L <- max(which(df[,2] < df[,3]))
-
-ggplot() +
-    geom_point(aes(x=1:nrow(df), y=df[,2], color="p-values")) +
-    geom_line(aes(x=1:nrow(df), y=df[,3], color="BH")) +
-    geom_vline(xintercept = L)
-cat("Rejected Features =", L, "\n",
-    "Rejected Hypothesis Features =" )
-for(i in 1:L) {
-    cat("\t(", i, ")", as.character(df[i,1]), "\n")
-}
+# y <- as.factor(data[,ncol(data)])
+# data <- as.matrix(data[,-ncol(data)])
+# pvals <- as.numeric(vector(length = ncol(data)))
+# df <- data.frame(
+#     word = colnames(data), 
+#     pvals <- pvals
+# )
+# BH <- as.numeric(vector(length =ncol(data)))
+# 
+# FDR <- 0.01
+# CL  <- 0.95
+# 
+# for(i in 1:length(pvals)) {
+#     test <- t.test(data[,i] ~ y,
+#                       alternative = "two.sided",
+#                       conf.level = CL )
+#     df[i,2] <- test$p.value
+#     BH[i] <- (FDR * i / length(pvals))
+# }
+# 
+# # order increasingly the pvalues
+# df <- df[order(df$pvals, decreasing = FALSE),]
+# df <- cbind(df, BH)
+# L <- max(which(df[,2] < df[,3]))
+# 
+# ggplot() +
+#     geom_point(aes(x=1:nrow(df), y=df[,2], color="p-values")) +
+#     geom_line(aes(x=1:nrow(df), y=df[,3], color="BH")) +
+#     geom_vline(xintercept = L)
+# cat("Rejected Features =", L, "\n",
+#     "Rejected Hypothesis Features =" )
+# for(i in 1:L) {
+#     cat("\t(", i, ")", as.character(df[i,1]), "\n")
+# }
 
 ```
 
