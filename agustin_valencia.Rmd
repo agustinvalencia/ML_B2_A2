@@ -157,6 +157,9 @@ ggplot(data) +
 
 Although it seems to be a fair general approximation it seems to be missing some abnormal positive and negative peaks.
 
+
+
+
 ```{r q1_predictions_over_year, fig.align='center', out.height='40%', q1=TRUE}
 
 # Plot GAM predictions per year
@@ -198,6 +201,18 @@ p
 ```
 
 It can be seen that given the variability of mortality per week each year, the GAM fit acceptably well the data, though still too general, thus not as good as we would likr to.
+
+The 10 most significant terms in the model are:
+
+```{r q1_significant_terms, q1=TRUE}
+
+# significant terms.
+orderedCoefficients <- model$coefficients[order(model$coefficients, decreasing = TRUE)]
+print("The 10 most important coefficients:")
+orderedCoefficients[1:10]
+
+```
+
 
 4. Examine how the penalty factor of the spline function in the GAM model from step 2 influences the estimated deviance of the model. Make plots of the predicted and observed mortality against time for cases of very high and very low penalty factors. What is the relation of the penalty factor to the degrees of freedom? Do your results confirm this relationship?
 
@@ -334,12 +349,7 @@ The data file data.csv contains information about 64 e-mails which were manually
 ##                              Assignment 2
 ##############################################################################
 dataPath <- "data/data.csv"
-# data <- read.csv2(dataPath, encoding = "latin1", sep = ";")
-data <- read_delim("Data/data.csv", ";", 
-                   escape_double = FALSE, 
-                   locale = locale(encoding = "ISO-8859-1"), 
-                   trim_ws = TRUE)
-#data <- read.csv2(dataPath)
+data <- read.csv2(dataPath)
 ```
 
 
@@ -482,40 +492,40 @@ SVMs do not suffer the problem of highdimensional data, it will use all the feat
 
 ```{r q2_benjamini_la_pizza, q2=TRUE}
 
-# y <- as.factor(data[,ncol(data)])
-# data <- as.matrix(data[,-ncol(data)])
-# pvals <- as.numeric(vector(length = ncol(data)))
-# df <- data.frame(
-#     word = colnames(data), 
-#     pvals <- pvals
-# )
-# BH <- as.numeric(vector(length =ncol(data)))
-# 
-# FDR <- 0.01
-# CL  <- 0.95
-# 
-# for(i in 1:length(pvals)) {
-#     test <- t.test(data[,i] ~ y,
-#                       alternative = "two.sided",
-#                       conf.level = CL )
-#     df[i,2] <- test$p.value
-#     BH[i] <- (FDR * i / length(pvals))
-# }
-# 
-# # order increasingly the pvalues
-# df <- df[order(df$pvals, decreasing = FALSE),]
-# df <- cbind(df, BH)
-# L <- max(which(df[,2] < df[,3]))
-# 
-# ggplot() +
-#     geom_point(aes(x=1:nrow(df), y=df[,2], color="p-values")) +
-#     geom_line(aes(x=1:nrow(df), y=df[,3], color="BH")) +
-#     geom_vline(xintercept = L)
-# cat("Rejected Features =", L, "\n",
-#     "Rejected Hypothesis Features =" )
-# for(i in 1:L) {
-#     cat("\t(", i, ")", as.character(df[i,1]), "\n")
-# }
+y <- as.factor(data[,ncol(data)])
+data <- as.matrix(data[,-ncol(data)])
+pvals <- as.numeric(vector(length = ncol(data)))
+df <- data.frame(
+    word = colnames(data),
+    pvals <- pvals
+)
+BH <- as.numeric(vector(length =ncol(data)))
+
+FDR <- 0.01
+CL  <- 0.95
+
+for(i in 1:length(pvals)) {
+    test <- t.test(data[,i] ~ y,
+                      alternative = "two.sided",
+                      conf.level = CL )
+    df[i,2] <- test$p.value
+    BH[i] <- (FDR * i / length(pvals))
+}
+
+# order increasingly the pvalues
+df <- df[order(df$pvals, decreasing = FALSE),]
+df <- cbind(df, BH)
+L <- max(which(df[,2] < df[,3]))
+
+ggplot() +
+    geom_point(aes(x=1:nrow(df), y=df[,2], color="p-values")) +
+    geom_line(aes(x=1:nrow(df), y=df[,3], color="BH")) +
+    geom_vline(xintercept = L)
+cat("Rejected Features =", L, "\n",
+    "Rejected Hypothesis Features =" )
+for(i in 1:L) {
+    cat("\t(", i, ")", as.character(df[i,1]), "\n")
+}
 
 ```
 
