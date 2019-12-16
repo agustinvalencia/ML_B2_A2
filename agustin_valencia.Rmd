@@ -20,6 +20,7 @@ library(readr)
 set.seed(12345)
 ```
 
+
 # Assignment 1. Using GAM and GLM to examine mortality rates
 
 The Excel document influenza.xlsx contains weekly data on the mortality and the number of laboratory-confirmed cases of influenza in Sweden. In addition, there is information about population-weighted temperature anomalies (temperature deficits).
@@ -133,16 +134,33 @@ The summary of the obtained probabilistic model is:
 
 ```{r q1_gam_summary, q1=TRUE}
 summary(model)
+modelMean <- mean(model$y)
+modelVar <- var(model$y)
 ```
 
-The smoothed curve approximated by the GAM model is:
+The model Mean and variance are : 
+
+```{r q1_gam_prob_model, q1=TRUE}
+print("Train predictions mean:")
+modelMean
+print("Train predictions variance:")
+modelVar
+```
+
+Thus as the summary states that the model family is Gaussian, it can be said that :
+
+$$Mortality \sim Year + spline(Week)$$
+$$Mortality \sim N(\mu=1783.765, \sigma=25981.62) $$
+
+
+\newpage
+The smoother curve approximated by the GAM model is:
 
 ```{r q1_gam_plot_model, fig.align='center', out.height='40%', q1=TRUE}
 plot(model, main="Smooth Approximation of Mortality")
 ```
 
 
-\newpage
 3. Plot predicted and observed mortality against time for the fitted model and comment on the quality of the fit. Investigate the output of the GAM model and report which terms appear to be significant in the model. Is there a trend in mortality change from one year to another? Plot the spline component and interpret the plot.
 
 ```{r q1_predictions, fig.align='center', out.height='40%', q1=TRUE}
@@ -156,7 +174,6 @@ ggplot(data) +
 ```
 
 Although it seems to be a fair general approximation it seems to be missing some abnormal positive and negative peaks.
-
 
 
 
@@ -200,7 +217,7 @@ p <- p + ylab("Mortality")
 p
 ```
 
-It can be seen that given the variability of mortality per week each year, the GAM fit acceptably well the data, though still too general, thus not as good as we would likr to.
+It can be seen that given the variability of mortality per week each year, the GAM fit acceptably well the data, though still too general, thus not as good as we would like to.
 
 The 10 most significant terms in the model are:
 
@@ -254,7 +271,6 @@ ggplot(df) +
     ggtitle("Effects of variations on SP penalization on Spline training") +
     xlab("Time") + ylab("Mortality")
 
-
 ```
 
 It can be seen that the lower the penalty the better the fit. In this case it looks good to have such a low penalty, though in other cases it might overfit the data.
@@ -270,7 +286,7 @@ ggplot() +
 
 ```
 
-Extracting the degrees of freedom from each penalization iteration it can be seen that the lower the penalization the more relaxed is the model, thus, the higher the degrees of freedom. 
+Extracting the degrees of freedom from each penalization iteration it can be seen that the lower the penalization the more relaxed is the model, thus, the higher the degrees of freedom. The penalty factor is inversely proportional to the degrees of freedom. Indeed, by looking at the above plots, this relationship is confirmed. A high penalty essentialy drops a higher number of parameters in the linear smoother matrix $S_\lambda$ (by approximating them to zero).
 
 5. Use the model obtained in step 2 and plot the residuals and the influenza values against time (in one plot). Is the temporal pattern in the residuals correlated to the outbreaks of influenza?
 
@@ -284,7 +300,7 @@ model <- gam (
                 s(Week, k = length(unique(data$Week))), 
                 data=data,
                 method = "GCV.Cp"
-             )
+              )
 ggplot(data) +
     geom_point(aes(x=Time, y=Influenza, color="Influenza")) +
     geom_line(aes(x=Time, y=model$residuals, color="Residuals")) +
@@ -334,6 +350,8 @@ ggplot() +
 ```
 
 The model seems to fit better the data, though there are still some data points not being well approximatted. This is sign that the predictor is not overfitted, so compared against the previous predictors, this is the best one. 
+
+
 
 
 \newpage
@@ -486,6 +504,7 @@ get_performance(yTest, svmPredictions, "SVM - Testing performance")
 
 SVMs do not suffer the problem of highdimensional data, it will use all the features to compute the support vectors and the hyperplane fitted by them. 
 
+Between Elasticnet and SVM models, the last one performs better.
 
 
 3. Implement Benjamini-Hochberg method for the original data, and use t.test() for computing p-values. Which features correspond to the rejected hypotheses? Interpret the result.
