@@ -479,6 +479,8 @@ a. Elastic net with the binomial response and $\alpha=0.5$ in which penalty is s
 cvElastNet <- cv.glmnet(x=t(x), y=y, alpha=.5, type.measure = "mse")
 plot(cvElastNet)
 optLamdba <- cvElastNet$lambda.min
+print("optimal lambda:")
+optLamdba
 
 elasticnetModel <- glmnet(x = t(x), y = y, family="binomial", 
                           alpha=.5, lambda = optLamdba)
